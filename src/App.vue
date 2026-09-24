@@ -113,16 +113,17 @@ watch(() => route.path, () => {
     </div>
 
     <!-- SEMUA HALAMAN LAINNYA: Layout Sidebar -->
-    <div v-else class="flex min-h-screen">
+    <div v-else :class="isAdmin ? 'flex min-h-screen' : 'min-h-screen'">
       <!-- Backdrop Mobile -->
       <div
-        v-if="isSidebarOpen"
+        v-if="isAdmin && isSidebarOpen"
         @click="isSidebarOpen = false"
         class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden transition-opacity duration-300"
       ></div>
 
       <!-- SIDEBAR NAVIGASI (CLEAN VISIBLE GRAY THEME WITH EMERALD ACCENTS) -->
       <aside
+        v-if="isAdmin"
         :class="[
           'fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between transition-transform duration-300 ease-in-out md:static md:translate-x-0',
           'bg-slate-200 border-r border-slate-300 text-slate-800 shadow-sm',
@@ -336,10 +337,65 @@ watch(() => route.path, () => {
         </div>
       </aside>
 
+      <!-- NAVBAR NAVIGASI USER -->
+      <nav v-if="!isAdmin" class="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+        <div class="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-3 px-4 py-3 md:px-8">
+          <router-link to="/" class="mr-auto flex items-center gap-2 text-slate-900">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            </div>
+            <span class="font-bold tracking-tight">SembakoMart</span>
+          </router-link>
+
+          <div class="order-3 flex w-full items-center gap-1 overflow-x-auto border-t border-slate-100 pt-2 text-xs font-semibold sm:order-2 sm:w-auto sm:border-0 sm:pt-0">
+            <router-link
+              to="/"
+              :class="['whitespace-nowrap rounded-lg px-3 py-2 transition', route.path === '/' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']"
+            >
+              Katalog
+            </router-link>
+            <router-link
+              to="/keranjang"
+              :class="['flex whitespace-nowrap items-center gap-1 rounded-lg px-3 py-2 transition', route.path === '/keranjang' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']"
+            >
+              Keranjang
+              <span v-if="cartCount > 0" class="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] text-amber-950">{{ cartCount }}</span>
+            </router-link>
+            <router-link
+              to="/riwayat"
+              :class="['whitespace-nowrap rounded-lg px-3 py-2 transition', route.path === '/riwayat' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']"
+            >
+              Riwayat
+            </router-link>
+            <router-link
+              to="/profil"
+              :class="['whitespace-nowrap rounded-lg px-3 py-2 transition', route.path === '/profil' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900']"
+            >
+              Profil
+            </router-link>
+          </div>
+
+          <button
+            v-if="isLoggedIn"
+            @click="logout"
+            class="order-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-200 hover:bg-rose-50 sm:order-3"
+          >
+            Keluar
+          </button>
+          <router-link
+            v-else
+            to="/login"
+            class="order-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:order-3"
+          >
+            Masuk
+          </router-link>
+        </div>
+      </nav>
+
       <!-- KONTEN UTAMA (SISI KANAN SIDEBAR) -->
       <div class="flex flex-1 flex-col min-w-0">
         <!-- Top Header Bar -->
-        <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 md:px-8 backdrop-blur-md shadow-sm">
+        <header v-if="isAdmin" class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 md:px-8 backdrop-blur-md shadow-sm">
           <div class="flex items-center gap-3">
             <!-- Tombol Hamburger Mobile -->
             <button

@@ -2,6 +2,7 @@ import api from './api'
 
 const STORAGE_KEY_ORDERS = 'sembako_local_orders'
 const STORAGE_KEY_UPDATES = 'sembako_transaksi_updates'
+const REMOVED_ORDER_IDS = new Set(['101', '102', '103', '104'])
 
 // Mengambil pembaruan lokal (status & bukti yang diperbarui secara lokal)
 export const getStoredUpdates = () => {
@@ -106,16 +107,18 @@ export const getLocalOrders = () => {
     if (!raw) {
       // Inisialisasi data transaksi awal agar dashboard terisi data
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(SAMPLE_ORDERS))
-      return SAMPLE_ORDERS
+      return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
     }
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) {
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(SAMPLE_ORDERS))
-      return SAMPLE_ORDERS
+      return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
     }
-    return parsed
+    const activeOrders = parsed.filter((order) => !REMOVED_ORDER_IDS.has(String(order?.id)))
+    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(activeOrders))
+    return activeOrders
   } catch (e) {
-    return SAMPLE_ORDERS
+    return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
   }
 }
 
@@ -183,15 +186,15 @@ export const normalizeOrders = (raw) => {
       const rawItems = order.produk || order.items || order.order_items || order.transaksi_items || []
       const items = Array.isArray(rawItems)
         ? rawItems.map((p) => ({
-            id: p.id || p.id_barang || p.produk_id,
-            nama_produk: p.nama_barang || p.nama_produk || p.nama || 'Produk Sembako',
-            qty: Number(p.pivot?.jumlah || p.jumlah || p.qty || 1),
-            harga: Number(p.pivot?.harga_satuan || p.harga_barang || p.harga || 0),
-            subtotal: Number(
-              p.pivot?.subtotal ||
-                (p.pivot?.harga_satuan || p.harga_barang || p.harga || 0) * (p.pivot?.jumlah || p.jumlah || p.qty || 1)
-            )
-          }))
+          id: p.id || p.id_barang || p.produk_id,
+          nama_produk: p.nama_barang || p.nama_produk || p.nama || 'Produk Sembako',
+          qty: Number(p.pivot?.jumlah || p.jumlah || p.qty || 1),
+          harga: Number(p.pivot?.harga_satuan || p.harga_barang || p.harga || 0),
+          subtotal: Number(
+            p.pivot?.subtotal ||
+            (p.pivot?.harga_satuan || p.harga_barang || p.harga || 0) * (p.pivot?.jumlah || p.jumlah || p.qty || 1)
+          )
+        }))
         : []
 
       return {
@@ -290,7 +293,7 @@ export const fetchOrders = async (isAdmin = false) => {
   })
 
   // Masukkan pesanan dari remote API (menimpa atau menambahkan)
-  remoteOrders.forEach((item) => {
+  remoteOrders.filter((item) => !REMOVED_ORDER_IDS.has(String(item?.id))).forEach((item) => {
     if (!item) return
     const id = String(item.id || '')
     const localUpdate = updates[id] || {}
