@@ -5,7 +5,7 @@ import api from '../services/api'
 
 const router = useRouter()
 
-const categories = ref(['Semua', 'Beras', 'Minyak', 'Gula & Garam', 'Bumbu'])
+const categories = ref(['Semua', 'Beras', 'Minyak', 'Gula / Garam', 'Bumbu'])
 const selectedCategory = ref('Semua')
 const products = ref([])
 const loading = ref(true)
@@ -31,9 +31,9 @@ const fetchProducts = async () => {
 const getCategoryName = (kategori) => {
   if (!kategori) return '-'
   if (typeof kategori === 'object') {
-    return kategori.nama_kategori || kategori.nama || '-'
+    return (kategori.nama_kategori || kategori.nama || '-').replaceAll('&', '/')
   }
-  return kategori
+  return String(kategori).replaceAll('&', '/')
 }
 
 const filteredProducts = computed(() => {
@@ -52,8 +52,9 @@ const filteredProducts = computed(() => {
 
     const matchesId =
       (target.includes('beras') && categoryId === '1') ||
-      (target.includes('minyak') && categoryId === '2') ||
-      (target.includes('bumbu') && categoryId === '3')
+      (target.includes('minyak') && categoryId === '3') ||
+      (target.includes('gula') && categoryId === '4') ||
+      (target.includes('bumbu') && categoryId === '5')
 
     return catName.includes(target) || matchesId || productName.includes(target.split(' ')[0])
   })
@@ -133,7 +134,7 @@ const categoryIcons = {
   'Semua': '🛒',
   'Beras': '🌾',
   'Minyak': '🫙',
-  'Gula & Garam': '🧂',
+  'Gula / Garam': '🧂',
   'Bumbu': '🌶️',
 }
 

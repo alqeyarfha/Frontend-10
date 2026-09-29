@@ -20,6 +20,15 @@
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Segarkan
         </button>
+        <button
+          @click="handleClearHistory"
+          :disabled="historyOrders.length === 0 || loading"
+          class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm hover:bg-rose-100 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+          title="Hapus transaksi yang sudah diproses dari riwayat lokal"
+        >
+          🗑️ Hapus Riwayat
+          <span v-if="historyOrders.length > 0" class="rounded-full bg-rose-200 px-1.5 py-0.5 text-[10px]">{{ historyOrders.length }}</span>
+        </button>
         <router-link
           to="/dashboard"
           class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all flex items-center gap-2"
@@ -67,10 +76,22 @@
             ✅ Terverifikasi ({{ countVerified }})
           </button>
           <button
-            @click="activeStatusFilter = 'selesai'"
-            :class="['px-3.5 py-2 rounded-xl font-bold transition-all duration-200', activeStatusFilter === 'selesai' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/60']"
+            @click="activeStatusFilter = 'sedang_dikirim'"
+            :class="['px-3.5 py-2 rounded-xl font-bold transition-all duration-200', activeStatusFilter === 'sedang_dikirim' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/60']"
           >
-            📦 Selesai ({{ countCompleted }})
+            🚚 Dikirim ({{ countShipping }})
+          </button>
+          <button
+            @click="activeStatusFilter = 'sudah_di_tempat'"
+            :class="['px-3.5 py-2 rounded-xl font-bold transition-all duration-200', activeStatusFilter === 'sudah_di_tempat' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/60']"
+          >
+            📍 Di Tempat ({{ countAtLocation }})
+          </button>
+          <button
+            @click="activeStatusFilter = 'diterima'"
+            :class="['px-3.5 py-2 rounded-xl font-bold transition-all duration-200', activeStatusFilter === 'diterima' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-white/60']"
+          >
+            ✅ Diterima ({{ countCompleted }})
           </button>
           <button
             @click="activeStatusFilter = 'ditolak'"
@@ -223,16 +244,38 @@
                     </button>
                   </template>
 
-                  <!-- Aksi jika Terverifikasi -->
+                  <!-- Aksi mengikuti alur pengiriman -->
                   <template v-else-if="order.status === 'terverifikasi'">
                     <button
                       type="button"
                       :disabled="actionLoadingId === order.id"
-                      @click="handleVerify(order.id, 'selesai')"
+                      @click="handleVerify(order.id, 'sedang_dikirim')"
                       class="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-3.5 py-2 font-bold text-xs transition-all shadow-sm disabled:opacity-50"
-                      title="Tandai pesanan telah selesai dikirim"
+                      title="Tandai barang sedang dikirim"
                     >
-                      📦 Selesaikan
+                      🚚 Mulai Kirim
+                    </button>
+                  </template>
+                  <template v-else-if="order.status === 'sedang_dikirim'">
+                    <button
+                      type="button"
+                      :disabled="actionLoadingId === order.id"
+                      @click="handleVerify(order.id, 'sudah_di_tempat')"
+                      class="rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white px-3.5 py-2 font-bold text-xs transition-all shadow-sm disabled:opacity-50"
+                      title="Tandai barang sudah sampai di tempat"
+                    >
+                      📍 Sudah di Tempat
+                    </button>
+                  </template>
+                  <template v-else-if="order.status === 'sudah_di_tempat'">
+                    <button
+                      type="button"
+                      :disabled="actionLoadingId === order.id"
+                      @click="handleVerify(order.id, 'diterima')"
+                      class="rounded-xl bg-slate-600 hover:bg-slate-700 text-white px-3.5 py-2 font-bold text-xs transition-all shadow-sm disabled:opacity-50"
+                      title="Tandai barang sudah diterima pelanggan"
+                    >
+                      ✅ Tandai Diterima
                     </button>
                   </template>
 
@@ -244,6 +287,15 @@
                     title="Buka rincian lengkap pesanan"
                   >
                     📋 Detail
+                  </button>
+                  <button
+                    v-if="order.status !== 'pending'"
+                    type="button"
+                    @click="handleDeleteOrder(order)"
+                    class="rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 px-3 py-2 font-bold text-xs transition-all"
+                    title="Hapus transaksi dari riwayat"
+                  >
+                    🗑️ Hapus
                   </button>
                 </div>
               </td>
@@ -406,7 +458,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { fetchOrders, verifikasiTransaksi, getProofImageUrl } from '../services/transaksiService'
+import { fetchOrders, verifikasiTransaksi, getProofImageUrl, removeOrderHistory } from '../services/transaksiService'
 
 const allOrders = ref([])
 const loading = ref(true)
@@ -426,8 +478,11 @@ const selectedDetailOrder = ref(null)
 
 const countPending = computed(() => allOrders.value.filter((o) => (o.status || 'pending').toLowerCase() === 'pending').length)
 const countVerified = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'terverifikasi').length)
-const countCompleted = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'selesai').length)
+const countShipping = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'sedang_dikirim').length)
+const countAtLocation = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'sudah_di_tempat').length)
+const countCompleted = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'diterima').length)
 const countRejected = computed(() => allOrders.value.filter((o) => (o.status || '').toLowerCase() === 'ditolak').length)
+const historyOrders = computed(() => allOrders.value.filter((order) => (order.status || 'pending').toLowerCase() !== 'pending'))
 
 // Filter berdasarkan status dan search bar
 const filteredOrders = computed(() => {
@@ -466,9 +521,10 @@ const getStatusBadgeClass = (status) => {
   const s = String(status || '').toLowerCase()
   if (s === 'pending') return 'bg-amber-50 text-amber-700 border-amber-200'
   if (s === 'terverifikasi') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-  if (s === 'diproses') return 'bg-blue-50 text-blue-700 border-blue-200'
+  if (s === 'sedang_dikirim') return 'bg-blue-50 text-blue-700 border-blue-200'
+  if (s === 'sudah_di_tempat') return 'bg-indigo-50 text-indigo-700 border-indigo-200'
   if (s === 'ditolak') return 'bg-rose-50 text-rose-700 border-rose-200'
-  if (s === 'selesai') return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+  if (s === 'diterima') return 'bg-slate-50 text-slate-700 border-slate-300'
   return 'bg-slate-50 text-slate-600 border-slate-200'
 }
 
@@ -476,9 +532,10 @@ const getStatusLabel = (status) => {
   const s = String(status || '').toLowerCase()
   if (s === 'pending') return 'Pending'
   if (s === 'terverifikasi') return 'Terverifikasi'
-  if (s === 'diproses') return 'Diproses'
+  if (s === 'sedang_dikirim') return 'Sedang Dikirim'
+  if (s === 'sudah_di_tempat') return 'Sudah di Tempat'
   if (s === 'ditolak') return 'Ditolak'
-  if (s === 'selesai') return 'Selesai'
+  if (s === 'diterima') return 'Diterima'
   return status || 'Pending'
 }
 
@@ -514,8 +571,12 @@ const handleVerify = async (orderId, targetStatus) => {
         alert(`Pesanan #${orderId} berhasil DIVERIFIKASI! Status kini Terverifikasi dan tidak lagi Pending.`)
       } else if (targetStatus === 'ditolak') {
         alert(`Pesanan #${orderId} telah ditolak.`)
-      } else if (targetStatus === 'selesai') {
-        alert(`Pesanan #${orderId} telah selesai.`)
+      } else if (targetStatus === 'sedang_dikirim') {
+        alert(`Pesanan #${orderId} sedang dikirim.`)
+      } else if (targetStatus === 'sudah_di_tempat') {
+        alert(`Pesanan #${orderId} sudah sampai di tempat.`)
+      } else if (targetStatus === 'diterima') {
+        alert(`Pesanan #${orderId} telah diterima pelanggan.`)
       }
     }
   } catch (err) {
@@ -535,6 +596,29 @@ const loadOrders = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleClearHistory = () => {
+  if (historyOrders.value.length === 0) return
+
+  const confirmed = window.confirm(
+    `Hapus ${historyOrders.value.length} transaksi dari riwayat? Pesanan pending tidak akan dihapus.`
+  )
+  if (!confirmed) return
+
+  removeOrderHistory(historyOrders.value.map((order) => order.id))
+  allOrders.value = allOrders.value.filter((order) => (order.status || 'pending').toLowerCase() === 'pending')
+  activeStatusFilter.value = 'semua'
+}
+
+const handleDeleteOrder = (order) => {
+  if (!order?.id || order.status === 'pending') return
+
+  const confirmed = window.confirm(`Hapus transaksi #${order.id} dari riwayat?`)
+  if (!confirmed) return
+
+  removeOrderHistory([order.id])
+  allOrders.value = allOrders.value.filter((item) => String(item.id) !== String(order.id))
 }
 
 onMounted(() => {

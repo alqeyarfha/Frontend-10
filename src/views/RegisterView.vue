@@ -10,6 +10,7 @@ const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 const phone = ref('')
+const address = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -62,6 +63,7 @@ const handleRegister = async () => {
   successMessage.value = ''
 
   if (!name.value.trim()) { errorMessage.value = 'Nama lengkap wajib diisi.'; return }
+  if (!address.value.trim()) { errorMessage.value = 'Alamat wajib diisi.'; return }
   if (password.value.length < 8) { errorMessage.value = 'Kata sandi minimal 8 karakter.'; return }
   if (password.value !== passwordConfirm.value) { errorMessage.value = 'Konfirmasi kata sandi tidak cocok.'; return }
 
@@ -70,10 +72,15 @@ const handleRegister = async () => {
     const payload = {
       name: name.value.trim(),
       email: email.value.trim(),
+      alamat: address.value.trim(),
+      address: address.value.trim(),
       password: password.value,
       password_confirmation: passwordConfirm.value,
     }
-    if (phone.value.trim()) payload.phone = phone.value.trim()
+    if (phone.value.trim()) {
+      payload.phone = phone.value.trim()
+      payload.no_hp = phone.value.trim()
+    }
 
     await api.post('/register', payload)
 
@@ -92,6 +99,10 @@ const handleRegister = async () => {
         ...(userObj || {}),
         email: email.value.trim(),
         name: userObj?.name || name.value.trim(),
+        no_hp: userObj?.no_hp || userObj?.phone || phone.value.trim(),
+        phone: userObj?.phone || userObj?.no_hp || phone.value.trim(),
+        alamat: address.value.trim() || userObj?.alamat || userObj?.address || '',
+        address: address.value.trim() || userObj?.address || userObj?.alamat || '',
         role: userObj?.role || 'pembeli',
       }
       localStorage.setItem('user', JSON.stringify(finalUser))
@@ -203,6 +214,18 @@ const handleRegister = async () => {
               <path d="M12 18h.01"/>
             </svg>
             <input id="reg-phone" v-model="phone" type="tel" placeholder="08xxxxxxxxxx" class="input-field" autocomplete="tel" />
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="input-group">
+          <label for="reg-address" class="label">Alamat Lengkap</label>
+          <div class="input-wrapper">
+            <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <textarea id="reg-address" v-model="address" required rows="2" placeholder="Alamat lengkap untuk pengiriman" class="input-field" autocomplete="street-address"></textarea>
           </div>
         </div>
 

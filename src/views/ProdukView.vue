@@ -25,10 +25,10 @@ const previewImage = ref('')
 const imageFile = ref(null)
 
 const categoryOptions = [
-  { id: '1', name: 'Beras & Tepung' },
-  { id: '2', name: 'Minyak & Gula' },
-  { id: '3', name: 'Gula & Garam' },
-  { id: '4', name: 'Minyak & Margarin' },
+  { id: '1', name: 'Beras / Tepung' },
+  { id: '2', name: 'Minyak / Gula' },
+  { id: '3', name: 'Minyak / Margarin' },
+  { id: '4', name: 'Gula / Garam' },
   { id: '5', name: 'Bumbu Dapur' }
 ]
 
@@ -199,9 +199,9 @@ const deleteProduct = async (id) => {
 const getCategoryName = (kategori) => {
   if (!kategori) return '-'
   if (typeof kategori === 'object') {
-    return kategori.nama_kategori || kategori.nama || '-'
+    return (kategori.nama_kategori || kategori.nama || '-').replaceAll('&', '/')
   }
-  return kategori
+  return String(kategori).replaceAll('&', '/')
 }
 
 onMounted(() => {

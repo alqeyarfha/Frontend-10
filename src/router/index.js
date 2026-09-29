@@ -10,6 +10,7 @@ import RiwayatView from '../views/RiwayatView.vue'
 import ProfilView from '../views/ProfilView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AdminTransaksiView from '../views/AdminTransaksiView.vue'
+import AdminUsersView from '../views/AdminUsersView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -23,6 +24,7 @@ const routes = [
   { path: '/profil', name: 'profil', component: ProfilView },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAdmin: true } },
   { path: '/admin/transaksi', name: 'admin-transaksi', component: AdminTransaksiView, meta: { requiresAdmin: true } }
+  , { path: '/admin/users', name: 'admin-users', component: AdminUsersView, meta: { requiresAdmin: true } }
 ]
 
 const router = createRouter({

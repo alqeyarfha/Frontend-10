@@ -33,9 +33,9 @@ const apiBaseUrl = (api.defaults.baseURL || 'http://10.10.8.174:8000/api').repla
 const getCategoryName = (kategori) => {
   if (!kategori) return '-'
   if (typeof kategori === 'object') {
-    return kategori.nama_kategori || kategori.nama || '-'
+    return (kategori.nama_kategori || kategori.nama || '-').replaceAll('&', '/')
   }
-  return kategori
+  return String(kategori).replaceAll('&', '/')
 }
 
 const getProductImageUrl = (productItem) => {

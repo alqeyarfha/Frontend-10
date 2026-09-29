@@ -71,6 +71,7 @@ const isLoggedIn = computed(() => {
 const getPageTitle = (path) => {
   if (path === '/dashboard') return 'Dashboard & Ringkasan Toko'
   if (path === '/admin/transaksi') return 'Pusat Verifikasi & Manajemen Transaksi'
+  if (path === '/admin/users') return 'Profil Semua User'
   if (path === '/produk') return 'Manajemen Stok Produk Sembako'
   if (path === '/') return 'Katalog Toko Sembako'
   if (path === '/keranjang') return 'Keranjang Belanja'
@@ -200,6 +201,22 @@ watch(() => route.path, () => {
                 >
                   {{ pendingCount }}
                 </span>
+              </router-link>
+
+              <!-- Profil Semua User -->
+              <router-link
+                to="/admin/users"
+                :class="[
+                  'flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200',
+                  route.path === '/admin/users'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-300/70 hover:text-slate-950 font-medium'
+                ]"
+              >
+                <div :class="['p-1 rounded-lg', route.path === '/admin/users' ? 'bg-white/20' : 'bg-transparent']">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m6-10a4 4 0 100-8 4 4 0 000 8zm8-3a3 3 0 10-2.83-4M22 21v-2a4 4 0 00-3-3.87"/></svg>
+                </div>
+                <span>Profil Semua User</span>
               </router-link>
 
               <!-- Kelola Produk -->
@@ -375,10 +392,29 @@ watch(() => route.path, () => {
             </router-link>
           </div>
 
+          <router-link
+            v-if="isLoggedIn"
+            to="/profil"
+            aria-label="Buka profil user"
+            :class="[
+              'order-2 flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition sm:order-3',
+              route.path === '/profil'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50'
+            ]"
+          >
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white shadow-sm">
+              {{ (currentUser.name || 'U').charAt(0).toUpperCase() }}
+            </span>
+            <span class="hidden max-w-[130px] truncate text-xs font-semibold sm:block">
+              {{ currentUser.name || 'Profil Saya' }}
+            </span>
+          </router-link>
+
           <button
             v-if="isLoggedIn"
             @click="logout"
-            class="order-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-200 hover:bg-rose-50 sm:order-3"
+            class="order-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-200 hover:bg-rose-50 sm:order-4"
           >
             Keluar
           </button>

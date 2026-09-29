@@ -1,9 +1,10 @@
 <template>
-  <div class="space-y-5 mx-auto max-w-6xl font-sans antialiased">
+  <div class="dashboard-shell space-y-5 mx-auto max-w-6xl font-sans antialiased">
     <!-- Header Admin Dashboard (Clean White & Emerald Accent) -->
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+    <div class="dashboard-hero relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+      <div class="dashboard-hero-mark pointer-events-none absolute -right-10 -top-12 hidden h-40 w-40 rounded-full border-[18px] border-emerald-50 sm:block"></div>
       <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
+        <div class="relative z-10">
           <div class="flex items-center gap-2.5 flex-wrap">
             <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-700">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Toko Aktif & Online
@@ -18,9 +19,23 @@
           <p class="mt-1 text-sm text-slate-600 max-w-2xl leading-relaxed">
             Berikut ringkasan performa penjualan, status verifikasi pesanan, dan pemantauan stok sembako hari ini.
           </p>
+          <div class="mt-5 flex flex-wrap gap-2.5">
+            <div class="dashboard-insight border-emerald-100 bg-emerald-50 text-emerald-700">
+              <span class="dashboard-insight-dot bg-emerald-500"></span>
+              <span><strong>{{ todayOrders }}</strong> pesanan hari ini</span>
+            </div>
+            <div class="dashboard-insight border-amber-100 bg-amber-50 text-amber-700">
+              <span class="dashboard-insight-dot bg-amber-500"></span>
+              <span><strong>{{ countPending }}</strong> perlu ditinjau</span>
+            </div>
+            <div class="dashboard-insight border-rose-100 bg-rose-50 text-rose-700">
+              <span class="dashboard-insight-dot bg-rose-500"></span>
+              <span><strong>{{ lowStockProducts.length }}</strong> stok menipis</span>
+            </div>
+          </div>
         </div>
 
-        <div class="flex items-center gap-2.5 flex-wrap">
+        <div class="relative z-10 flex items-center gap-2.5 flex-wrap">
           <router-link
             to="/admin/transaksi"
             aria-label="Buka halaman verifikasi transaksi"
@@ -40,11 +55,12 @@
           </router-link>
           <button
             @click="loadAllDashboardData"
-            class="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-2.5 text-xs font-semibold text-slate-600 transition-all duration-200 shadow-sm"
+            :disabled="loading"
+            class="dashboard-control rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-2.5 text-xs font-semibold text-slate-600 transition-all duration-200 shadow-sm disabled:cursor-wait disabled:opacity-60"
             title="Muat ulang data"
             aria-label="Muat ulang data dashboard"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <svg :class="['w-4 h-4', { 'animate-spin': loading }]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           </button>
         </div>
       </div>
@@ -132,7 +148,7 @@
 
     <div v-else class="space-y-6">
       <!-- 5 Kartu KPI -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="dashboard-kpi-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <!-- Total Pendapatan -->
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow transition-all duration-200">
           <div class="flex items-center justify-between mb-3">
@@ -396,7 +412,7 @@
                   </td>
                   <td class="py-3 px-3 text-center">
                     <span :class="['inline-block rounded-full px-2.5 py-1 text-[10px] font-bold border', getStatusClass(order.status)]">
-                      {{ order.status || 'Pending' }}
+                      {{ getStatusLabel(order.status) }}
                     </span>
                   </td>
                   <td class="py-3 px-3 text-right">
@@ -404,10 +420,15 @@
                       v-if="order.status === 'pending'"
                       type="button"
                       @click="quickVerify(order.id)"
-                      class="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-[11px] font-semibold transition-all shadow-sm"
+                      :disabled="verifyingOrderId === order.id"
+                      class="dashboard-control rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-[11px] font-semibold transition-all shadow-sm disabled:cursor-wait disabled:opacity-70"
                       title="Setujui dan Verifikasi"
                     >
-                      ✓ Verifikasi
+                      <span v-if="verifyingOrderId === order.id" class="inline-flex items-center gap-1.5">
+                        <span class="h-3 w-3 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
+                        Memproses
+                      </span>
+                      <span v-else>✓ Verifikasi</span>
                     </button>
                     <router-link
                       v-else
@@ -532,6 +553,7 @@ const loading = ref(true)
 const proofModalOpen = ref(false)
 const selectedProofUrl = ref('')
 const selectedProofOrderId = ref('')
+const verifyingOrderId = ref(null)
 
 // Metrics realtime
 const todayTotal = ref(0)
@@ -623,9 +645,22 @@ const getStatusClass = (status) => {
   const s = String(status || '').toLowerCase()
   if (s === 'pending') return 'bg-amber-50 text-amber-700 border-amber-200'
   if (s === 'terverifikasi') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-  if (s === 'selesai') return 'bg-blue-50 text-blue-700 border-blue-200'
+  if (s === 'sedang_dikirim') return 'bg-blue-50 text-blue-700 border-blue-200'
+  if (s === 'sudah_di_tempat') return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+  if (s === 'diterima') return 'bg-slate-50 text-slate-700 border-slate-300'
   if (s === 'ditolak') return 'bg-rose-50 text-rose-700 border-rose-200'
   return 'bg-slate-50 text-slate-600 border-slate-200'
+}
+
+const getStatusLabel = (status) => {
+  const s = String(status || '').toLowerCase()
+  if (s === 'pending') return 'Pending'
+  if (s === 'terverifikasi') return 'Terverifikasi'
+  if (s === 'sedang_dikirim') return 'Sedang Dikirim'
+  if (s === 'sudah_di_tempat') return 'Sudah di Tempat'
+  if (s === 'diterima') return 'Diterima'
+  if (s === 'ditolak') return 'Ditolak'
+  return status || 'Pending'
 }
 
 const openProofModal = (proofUrl, orderId) => {
@@ -635,6 +670,9 @@ const openProofModal = (proofUrl, orderId) => {
 }
 
 const quickVerify = async (orderId) => {
+  if (verifyingOrderId.value !== null) return
+
+  verifyingOrderId.value = orderId
   try {
     const res = await verifikasiTransaksi(orderId, 'terverifikasi')
     if (res.success) {
@@ -647,6 +685,8 @@ const quickVerify = async (orderId) => {
     }
   } catch (err) {
     alert('Gagal memverifikasi pesanan.')
+  } finally {
+    verifyingOrderId.value = null
   }
 }
 
@@ -777,3 +817,90 @@ onUnmounted(() => {
   window.removeEventListener('transaksi-updated', loadAllDashboardData)
 })
 </script>
+
+<style scoped>
+.dashboard-shell {
+  isolation: isolate;
+}
+
+.dashboard-hero {
+  animation: dashboard-enter 500ms ease-out both;
+}
+
+.dashboard-hero-mark {
+  transform: rotate(18deg);
+}
+
+.dashboard-insight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-width: 1px;
+  border-radius: 9999px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.dashboard-insight strong {
+  font-weight: 800;
+}
+
+.dashboard-insight-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+}
+
+.dashboard-kpi-grid > div {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.dashboard-kpi-grid > div:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-shell .grid > .rounded-2xl {
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.dashboard-shell .grid > .rounded-2xl:hover {
+  border-color: rgb(203 213 225);
+  box-shadow: 0 10px 24px -18px rgb(15 23 42 / 0.35);
+}
+
+.dashboard-control {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.dashboard-control:active {
+  transform: scale(0.96);
+}
+
+.dashboard-shell a,
+.dashboard-shell button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes dashboard-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-hero,
+  .dashboard-kpi-grid > div,
+  .dashboard-shell .grid > .rounded-2xl {
+    animation: none;
+    transition: none;
+  }
+}
+</style>

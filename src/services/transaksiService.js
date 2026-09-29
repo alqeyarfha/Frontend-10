@@ -2,7 +2,60 @@ import api from './api'
 
 const STORAGE_KEY_ORDERS = 'sembako_local_orders'
 const STORAGE_KEY_UPDATES = 'sembako_transaksi_updates'
+const STORAGE_KEY_REMOVED_ORDERS = 'sembako_removed_order_ids'
 const REMOVED_ORDER_IDS = new Set(['101', '102', '103', '104'])
+
+const getRemovedOrderIds = () => {
+  try {
+    const storedIds = JSON.parse(localStorage.getItem(STORAGE_KEY_REMOVED_ORDERS) || '[]')
+    return new Set([
+      ...REMOVED_ORDER_IDS,
+      ...(Array.isArray(storedIds) ? storedIds.map((id) => String(id)) : [])
+    ])
+  } catch (e) {
+    return new Set(REMOVED_ORDER_IDS)
+  }
+}
+
+const isRemovedOrder = (order) => getRemovedOrderIds().has(String(order?.id))
+
+export const normalizeOrderStatus = (status) => {
+  const normalized = String(status || 'pending').toLowerCase()
+  if (normalized === 'diproses' || normalized === 'sedang dikirim') return 'sedang_dikirim'
+  if (normalized === 'sudah di tempat' || normalized === 'sudah_ditempat') return 'sudah_di_tempat'
+  if (normalized === 'selesai') return 'diterima'
+  return normalized
+}
+
+const normalizePaymentMethod = (order) => {
+  const rawMethod = order?.metode_pembayaran || order?.metode_bayar || order?.payment_method || order?.paymentMethod || order?.method
+  const method = String(rawMethod || 'transfer').trim().toLowerCase()
+  return method.includes('cod') || method.includes('cash') ? 'cod' : 'transfer'
+}
+
+const stripCustomerIdentifiers = (order) => {
+  if (!order || typeof order !== 'object') return order
+
+  const {
+    user_id,
+    pelanggan_id,
+    customer_id,
+    id_pelanggan,
+    ...safeOrder
+  } = order
+
+  if (safeOrder.user && typeof safeOrder.user === 'object') {
+    const { id, user_id: nestedUserId, pelanggan_id: nestedPelangganId, ...safeUser } = safeOrder.user
+    safeOrder.user = safeUser
+  }
+
+  if (safeOrder.pelanggan && typeof safeOrder.pelanggan === 'object') {
+    const { id, user_id: nestedUserId, pelanggan_id: nestedPelangganId, ...safeCustomer } = safeOrder.pelanggan
+    safeOrder.pelanggan = safeCustomer
+  }
+
+  return safeOrder
+}
 
 // Mengambil pembaruan lokal (status & bukti yang diperbarui secara lokal)
 export const getStoredUpdates = () => {
@@ -106,29 +159,59 @@ export const getLocalOrders = () => {
     const raw = localStorage.getItem(STORAGE_KEY_ORDERS)
     if (!raw) {
       // Inisialisasi data transaksi awal agar dashboard terisi data
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(SAMPLE_ORDERS))
-      return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
+      const safeSampleOrders = SAMPLE_ORDERS
+        .filter((order) => !isRemovedOrder(order))
+        .map(stripCustomerIdentifiers)
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(safeSampleOrders))
+      return safeSampleOrders
     }
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(SAMPLE_ORDERS))
-      return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
+      const safeSampleOrders = SAMPLE_ORDERS
+        .filter((order) => !isRemovedOrder(order))
+        .map(stripCustomerIdentifiers)
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(safeSampleOrders))
+      return safeSampleOrders
     }
-    const activeOrders = parsed.filter((order) => !REMOVED_ORDER_IDS.has(String(order?.id)))
+    const activeOrders = parsed
+      .filter((order) => !isRemovedOrder(order))
+      .map(stripCustomerIdentifiers)
     localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(activeOrders))
     return activeOrders
   } catch (e) {
-    return SAMPLE_ORDERS.filter((order) => !REMOVED_ORDER_IDS.has(String(order.id)))
+    return SAMPLE_ORDERS
+      .filter((order) => !isRemovedOrder(order))
+      .map(stripCustomerIdentifiers)
   }
 }
 
 // Menyimpan pesanan lokal
 export const saveLocalOrders = (orders) => {
   try {
-    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders))
+    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders.map(stripCustomerIdentifiers)))
     window.dispatchEvent(new CustomEvent('transaksi-updated'))
   } catch (e) {
     console.warn('Gagal menyimpan pesanan lokal', e)
+  }
+}
+
+export const removeOrderHistory = (orderIds) => {
+  const idsToRemove = new Set((Array.isArray(orderIds) ? orderIds : []).map((id) => String(id)))
+  if (idsToRemove.size === 0) return
+
+  try {
+    const removedIds = new Set(getRemovedOrderIds())
+    idsToRemove.forEach((id) => removedIds.add(id))
+    localStorage.setItem(STORAGE_KEY_REMOVED_ORDERS, JSON.stringify([...removedIds]))
+
+    const localOrders = getLocalOrders().filter((order) => !idsToRemove.has(String(order?.id)))
+    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(localOrders))
+
+    const updates = getStoredUpdates()
+    idsToRemove.forEach((id) => delete updates[id])
+    saveStoredUpdates(updates)
+  } catch (e) {
+    console.warn('Gagal menghapus riwayat transaksi lokal', e)
   }
 }
 
@@ -198,20 +281,20 @@ export const normalizeOrders = (raw) => {
         : []
 
       return {
-        ...order,
+        ...stripCustomerIdentifiers(order),
         ...localUpdate,
         id: order.id || `TRX-${Date.now()}`,
         total_harga: total,
         total: total,
         tanggal: rawDate,
         created_at: order.created_at || rawDate,
-        status: (localUpdate.status || order.status || 'pending').toLowerCase(),
+        status: normalizeOrderStatus(localUpdate.status || order.status || 'pending'),
         nama_penerima: customerName,
         no_hp: phone,
         alamat: address,
         catatan: order.catatan || '',
         items: items.length > 0 ? items : (order.items || []),
-        metode_pembayaran: order.metode_pembayaran || 'transfer',
+        metode_pembayaran: normalizePaymentMethod(order),
         bukti_transaksi:
           localUpdate.bukti_transaksi ||
           order.bukti_transaksi ||
@@ -287,20 +370,20 @@ export const fetchOrders = async (isAdmin = false) => {
     orderMap.set(id, {
       ...item,
       ...localUpdate,
-      status: (localUpdate.status || item.status || 'pending').toLowerCase(),
+      status: normalizeOrderStatus(localUpdate.status || item.status || 'pending'),
       bukti_transaksi: localUpdate.bukti_transaksi || item.bukti_transaksi || null
     })
   })
 
   // Masukkan pesanan dari remote API (menimpa atau menambahkan)
-  remoteOrders.filter((item) => !REMOVED_ORDER_IDS.has(String(item?.id))).forEach((item) => {
+  remoteOrders.filter((item) => !isRemovedOrder(item)).forEach((item) => {
     if (!item) return
     const id = String(item.id || '')
     const localUpdate = updates[id] || {}
     orderMap.set(id, {
       ...item,
       ...localUpdate,
-      status: (localUpdate.status || item.status || 'pending').toLowerCase(),
+      status: normalizeOrderStatus(localUpdate.status || item.status || 'pending'),
       bukti_transaksi: localUpdate.bukti_transaksi || item.bukti_transaksi || null
     })
   })
@@ -336,6 +419,9 @@ export const createOrder = async (payload, proofBase64 = null) => {
 
   const orderPayload = {
     ...payload,
+    metode_pembayaran: normalizePaymentMethod(payload),
+    metode_bayar: normalizePaymentMethod(payload),
+    payment_method: normalizePaymentMethod(payload),
     status: 'pending',
     bukti_transaksi: proofBase64 || null,
     bukti_pembayaran: proofBase64 || null
@@ -374,16 +460,15 @@ export const createOrder = async (payload, proofBase64 = null) => {
   localOrders.unshift(finalOrder)
   saveLocalOrders(localOrders)
 
-  // Simpan juga bukti ke updates
-  if (proofBase64) {
-    const updates = getStoredUpdates()
-    updates[String(orderId)] = {
-      ...(updates[String(orderId)] || {}),
-      bukti_transaksi: proofBase64,
-      status: 'pending'
-    }
-    saveStoredUpdates(updates)
+  // Simpan metode dan bukti ke updates agar tidak tertimpa saat data backend dimuat ulang.
+  const updates = getStoredUpdates()
+  updates[String(orderId)] = {
+    ...(updates[String(orderId)] || {}),
+    metode_pembayaran: orderPayload.metode_pembayaran,
+    status: 'pending',
+    ...(proofBase64 ? { bukti_transaksi: proofBase64 } : {})
   }
+  saveStoredUpdates(updates)
 
   return finalOrder
 }

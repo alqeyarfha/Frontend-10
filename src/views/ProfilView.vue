@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../services/api'
 
 const user = ref({
@@ -20,14 +20,21 @@ const form = ref({
 const isEditing = ref(false)
 const saving = ref(false)
 
+const isAdmin = computed(() => {
+  const role = String(user.value.role || '').toLowerCase()
+  return role === 'admin' || role === 'administrator' || role.includes('admin')
+})
+
+const profileTitle = computed(() => (isAdmin.value ? 'Profil Admin' : 'Profil Saya'))
+
 const loadUser = () => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
   user.value = currentUser
   form.value = {
     name: currentUser.name || '',
     email: currentUser.email || '',
-    no_hp: currentUser.no_hp || '',
-    alamat: currentUser.alamat || ''
+    no_hp: currentUser.no_hp || currentUser.phone || '',
+    alamat: currentUser.alamat || currentUser.address || ''
   }
 }
 
@@ -42,25 +49,23 @@ const saveProfile = async () => {
       alamat: form.value.alamat
     }
 
+    const profileEndpoints = isAdmin.value
+      ? ['/admin/profil', '/profil', '/pelanggan/profil']
+      : ['/pelanggan/profil', '/profil']
+
     const tryUpdate = async () => {
-      try {
-        const res = await api.patch('/pelanggan/profil', payload)
-        return res
-      } catch (err) {
-        if (err.response?.status === 404 || err.response?.status === 405) {
+      let lastError
+      for (const endpoint of profileEndpoints) {
+        for (const method of ['patch', 'put', 'post']) {
           try {
-            const res2 = await api.put('/pelanggan/profil', payload)
-            return res2
-          } catch (err2) {
-            if (err2.response?.status === 404 || err2.response?.status === 405) {
-              const res3 = await api.post('/pelanggan/profil', payload)
-              return res3
-            }
-            throw err2
+            return await api[method](endpoint, payload)
+          } catch (err) {
+            lastError = err
+            if (![404, 405].includes(err.response?.status)) throw err
           }
         }
-        throw err
       }
+      throw lastError
     }
 
     try {
@@ -96,7 +101,15 @@ onMounted(() => {
 <template>
   <div class="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
     <div class="mb-6 flex items-center justify-between gap-3">
-      <h2 class="text-xl font-bold text-slate-800">Profil Saya</h2>
+        <div class="flex items-center gap-3">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-sm">
+            {{ (user.name || (isAdmin ? 'A' : 'U')).charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-800">{{ profileTitle }}</h2>
+            <p class="text-xs text-slate-500">Kelola informasi akun dan kontak Anda</p>
+          </div>
+        </div>
       <button
         v-if="!isEditing"
         type="button"

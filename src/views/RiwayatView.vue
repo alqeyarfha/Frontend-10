@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { fetchOrders, uploadBuktiTransaksi, getProofImageUrl } from '../services/transaksiService'
+import { fetchOrders, uploadBuktiTransaksi, getProofImageUrl, removeOrderHistory } from '../services/transaksiService'
 
 const orders = ref([])
 const loading = ref(true)
@@ -16,6 +16,8 @@ const selectedOrder = ref(null)
 const uploadImageBase64 = ref('')
 const uploadFileObj = ref(null)
 const uploading = ref(false)
+
+const canDeleteOrder = (order) => String(order?.status || 'pending').toLowerCase() !== 'pending'
 
 const getOrderItems = (order) => {
   const items = order?.items || order?.order_items || order?.transaksi_items || order?.products || order?.detail || order?.data || []
@@ -36,13 +38,16 @@ const getStatusBadgeClass = (status) => {
   if (s === 'terverifikasi') {
     return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
   }
-  if (s === 'diproses') {
+  if (s === 'sedang_dikirim' || s === 'diproses') {
     return 'bg-blue-100 text-blue-800 border border-blue-200'
+  }
+  if (s === 'sudah_di_tempat' || s === 'sudah di tempat') {
+    return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
   }
   if (s === 'ditolak') {
     return 'bg-rose-100 text-rose-800 border border-rose-200'
   }
-  if (s === 'selesai') {
+  if (s === 'diterima' || s === 'selesai') {
     return 'bg-slate-100 text-slate-800 border border-slate-300'
   }
   return 'bg-slate-100 text-slate-700 border border-slate-200'
@@ -52,9 +57,10 @@ const getStatusLabel = (status) => {
   const s = String(status || '').toLowerCase()
   if (s === 'pending') return 'Menunggu Verifikasi Admin'
   if (s === 'terverifikasi') return 'Terverifikasi (Pembayaran Diterima)'
-  if (s === 'diproses') return 'Sedang Diproses'
+  if (s === 'sedang_dikirim' || s === 'diproses') return 'Sedang Dikirim'
+  if (s === 'sudah_di_tempat' || s === 'sudah di tempat') return 'Sudah di Tempat'
   if (s === 'ditolak') return 'Ditolak'
-  if (s === 'selesai') return 'Selesai'
+  if (s === 'diterima' || s === 'selesai') return 'Diterima'
   return status || 'Pending'
 }
 
@@ -140,6 +146,16 @@ const submitUploadProof = async () => {
   }
 }
 
+const handleDeleteOrder = (order) => {
+  if (!order?.id || !canDeleteOrder(order)) return
+
+  const confirmed = window.confirm(`Hapus transaksi #${order.id} dari riwayat?`)
+  if (!confirmed) return
+
+  removeOrderHistory([order.id])
+  orders.value = orders.value.filter((item) => String(item.id) !== String(order.id))
+}
+
 onMounted(() => {
   loadOrdersData()
   window.addEventListener('transaksi-updated', loadOrdersData)
@@ -201,6 +217,16 @@ onUnmounted(() => {
               {{ order.created_at ? new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-' }}
             </span>
           </div>
+
+          <button
+            v-if="canDeleteOrder(order)"
+            type="button"
+            @click="handleDeleteOrder(order)"
+            class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition"
+            title="Hapus transaksi dari riwayat"
+          >
+            🗑️ Hapus
+          </button>
 
           <!-- Status Badge -->
           <span :class="['inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wide border', getStatusBadgeClass(order.status)]">
