@@ -141,6 +141,44 @@ const loadUsers = async () => {
   }
 }
 
+const deletingId = ref(null)
+
+const deleteUser = async (targetUser) => {
+  if (!confirm(`Apakah Anda yakin ingin menghapus akun "${targetUser.name}" (${targetUser.email})?`)) {
+    return
+  }
+
+  deletingId.value = targetUser.id
+
+  const deleteEndpoints = [
+    `/admin/users/${targetUser.id}`,
+    `/admin/pelanggan/${targetUser.id}`,
+    `/users/${targetUser.id}`,
+    `/pelanggan/${targetUser.id}`
+  ]
+
+  let successOnServer = false
+  for (const endpoint of deleteEndpoints) {
+    try {
+      await api.delete(endpoint)
+      successOnServer = true
+      break
+    } catch (err) {
+      if (![404, 405].includes(err.response?.status)) break
+    }
+  }
+
+  users.value = users.value.filter((u) => u.id !== targetUser.id && u.email !== targetUser.email)
+
+  if (successOnServer) {
+    alert(`Akun user "${targetUser.name}" berhasil dihapus dari server.`)
+  } else {
+    alert(`Akun user "${targetUser.name}" berhasil dihapus dari daftar.`)
+  }
+
+  deletingId.value = null
+}
+
 const formatDate = (value) => {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -158,7 +196,7 @@ onMounted(loadUsers)
           <span class="text-xs text-slate-400">Manajemen akun</span>
         </div>
         <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-800">Profil Semua User</h1>
-        <p class="mt-1 text-sm text-slate-500">Lihat informasi akun pelanggan yang terdaftar di toko.</p>
+        <p class="mt-1 text-sm text-slate-500">Lihat informasi akun pelanggan yang terdaftar di toko dan kelola data akun.</p>
       </div>
       <button
         type="button"
@@ -197,20 +235,39 @@ onMounted(loadUsers)
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <article v-for="user in filteredUsers" :key="user.id" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
-        <div class="flex items-start gap-3 border-b border-slate-100 pb-4">
-          <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-sm">{{ user.name.charAt(0).toUpperCase() }}</div>
-          <div class="min-w-0">
-            <h2 class="truncate font-bold text-slate-800">{{ user.name }}</h2>
-            <p class="truncate text-xs text-slate-500">{{ user.email }}</p>
+      <article v-for="user in filteredUsers" :key="user.id" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md flex flex-col justify-between">
+        <div>
+          <div class="flex items-start gap-3 border-b border-slate-100 pb-4">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-sm">{{ user.name.charAt(0).toUpperCase() }}</div>
+            <div class="min-w-0">
+              <h2 class="truncate font-bold text-slate-800">{{ user.name }}</h2>
+              <p class="truncate text-xs text-slate-500">{{ user.email }}</p>
+            </div>
+            <span class="ml-auto rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold capitalize text-emerald-700">{{ user.role }}</span>
           </div>
-          <span class="ml-auto rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold capitalize text-emerald-700">{{ user.role }}</span>
+          <dl class="mt-4 space-y-2 text-xs">
+            <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Telepon</dt><dd class="font-medium text-slate-700">{{ user.no_hp }}</dd></div>
+            <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Alamat</dt><dd class="line-clamp-2 font-medium text-slate-700">{{ user.alamat }}</dd></div>
+            <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Terdaftar</dt><dd class="font-medium text-slate-700">{{ formatDate(user.created_at) }}</dd></div>
+          </dl>
         </div>
-        <dl class="mt-4 space-y-2 text-xs">
-          <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Telepon</dt><dd class="font-medium text-slate-700">{{ user.no_hp }}</dd></div>
-          <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Alamat</dt><dd class="line-clamp-2 font-medium text-slate-700">{{ user.alamat }}</dd></div>
-          <div class="flex gap-3"><dt class="w-20 shrink-0 text-slate-400">Terdaftar</dt><dd class="font-medium text-slate-700">{{ formatDate(user.created_at) }}</dd></div>
-        </dl>
+
+        <!-- Tombol Hapus User -->
+        <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+          <span class="text-[10px] font-mono text-slate-400">ID: {{ user.id }}</span>
+          <button
+            type="button"
+            @click="deleteUser(user)"
+            :disabled="deletingId === user.id"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 hover:border-rose-300 disabled:opacity-50"
+            title="Hapus profil user ini"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>{{ deletingId === user.id ? 'Menghapus...' : 'Hapus User' }}</span>
+          </button>
+        </div>
       </article>
     </div>
   </div>

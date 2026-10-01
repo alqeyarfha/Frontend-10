@@ -72,6 +72,7 @@ const getPageTitle = (path) => {
   if (path === '/dashboard') return 'Dashboard & Ringkasan Toko'
   if (path === '/admin/transaksi') return 'Pusat Verifikasi & Manajemen Transaksi'
   if (path === '/admin/users') return 'Profil Semua User'
+  if (path === '/admin/kategori') return 'Kelola Kategori Produk'
   if (path === '/produk') return 'Manajemen Stok Produk Sembako'
   if (path === '/') return 'Katalog Toko Sembako'
   if (path === '/keranjang') return 'Keranjang Belanja'
@@ -233,6 +234,54 @@ watch(() => route.path, () => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>
                 <span>Kelola Produk</span>
+              </router-link>
+
+              <!-- Kelola Kategori -->
+              <router-link
+                to="/admin/kategori"
+                :class="[
+                  'flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200',
+                  route.path === '/admin/kategori'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-300/70 hover:text-slate-950 font-medium'
+                ]"
+              >
+                <div :class="['p-1 rounded-lg', route.path === '/admin/kategori' ? 'bg-white/20' : 'bg-transparent']">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                </div>
+                <span>Kelola Kategori</span>
+              </router-link>
+
+              <!-- Laporan Penjualan -->
+              <router-link
+                to="/admin/laporan"
+                :class="[
+                  'flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200',
+                  route.path === '/admin/laporan'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-300/70 hover:text-slate-950 font-medium'
+                ]"
+              >
+                <div :class="['p-1 rounded-lg', route.path === '/admin/laporan' ? 'bg-white/20' : 'bg-transparent']">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <span>Laporan Penjualan</span>
+              </router-link>
+
+              <!-- Manajemen Restok -->
+              <router-link
+                to="/admin/restok"
+                :class="[
+                  'flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-all duration-200',
+                  route.path === '/admin/restok'
+                    ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-300/70 hover:text-slate-950 font-medium'
+                ]"
+              >
+                <div :class="['p-1 rounded-lg', route.path === '/admin/restok' ? 'bg-white/20' : 'bg-transparent']">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                </div>
+                <span>Manajemen Restok</span>
               </router-link>
             </div>
 

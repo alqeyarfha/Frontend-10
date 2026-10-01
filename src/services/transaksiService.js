@@ -599,3 +599,12 @@ export const getPendingCount = async () => {
     return 0
   }
 }
+
+export const getAllTransactions = async () => {
+  try {
+    return await fetchOrders(true)
+  } catch (error) {
+    console.error('Gagal fetch transaksi:', error)
+    return getLocalOrders()
+  }
+}

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
+import StokBadge from '../components/StokBadge.vue'
 
 const router = useRouter()
 
@@ -130,6 +131,34 @@ const addToCart = (product, event) => {
   alert(`${product.nama_produk || product.nama} berhasil ditambahkan ke keranjang!`)
 }
 
+const pesanSekarang = (product, event) => {
+  if (event) event.stopPropagation()
+  if (!product) return
+
+  // Tambah ke keranjang
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+  const existingItem = cart.find(item => item?.id === product.id)
+
+  if (existingItem) {
+    existingItem.qty++
+  } else {
+    cart.push({
+      id: product.id,
+      product_id: product.id,
+      nama: product.nama_produk || product.nama,
+      harga: product.harga,
+      gambar: getProductImageUrl(product),
+      qty: 1
+    })
+  }
+
+  localStorage.setItem('cart', JSON.stringify(cart))
+  refreshCartCount()
+  
+  // Langsung ke checkout
+  router.push('/checkout')
+}
+
 const categoryIcons = {
   'Semua': '🛒',
   'Beras': '🌾',
@@ -242,17 +271,13 @@ onMounted(() => {
               :alt="product?.nama_produk || product?.nama || 'Produk'"
               class="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
             />
-            <span
-              :class="[
-                'absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow-sm',
-                (product?.stok || 0) < 10 ? 'bg-rose-500' : 'bg-emerald-600'
-              ]"
-            >
-              Stok: {{ product?.stok || 0 }}
-            </span>
+            <!-- Status Badge Component -->
+            <div class="absolute left-2 top-2">
+              <StokBadge :stok="product?.stok || 0" :stok-minimum="product?.stok_minimum || 10" size="sm" />
+            </div>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-2">
             <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
               {{ getCategoryName(product?.kategori) }}
             </p>
@@ -269,11 +294,26 @@ onMounted(() => {
           </div>
 
           <button
-            @click="addToCart(product, $event)"
-            class="mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2.5 text-xs font-semibold text-white transition-all duration-200 shadow-sm active:scale-95"
+            v-if="(product?.stok || 0) === 0"
+            disabled
+            class="mt-4 w-full rounded-xl bg-slate-300 text-slate-600 px-3 py-2.5 text-xs font-semibold cursor-not-allowed"
           >
-            + Tambah ke Keranjang
+            Stok Habis
           </button>
+          <div v-else class="mt-4 flex gap-2.5">
+            <button
+              @click="addToCart(product, $event)"
+              class="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-2.5 text-xs font-semibold text-white transition-all duration-200 shadow-sm active:scale-95"
+            >
+              🛒 Keranjang
+            </button>
+            <button
+              @click="pesanSekarang(product)"
+              class="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 px-3 py-2.5 text-xs font-semibold text-white transition-all duration-200 shadow-sm active:scale-95"
+            >
+              ⚡ Pesan
+            </button>
+          </div>
         </article>
       </div>
     </section>

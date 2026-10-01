@@ -46,6 +46,22 @@ const handleLogout = () => {
           >
             Kelola Produk
           </router-link>
+
+          <router-link 
+            to="/admin/laporan" 
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200"
+            :class="route.path === '/admin/laporan' ? 'bg-slate-700 text-white shadow-sm border border-slate-600' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'"
+          >
+            📊 Laporan
+          </router-link>
+
+          <router-link 
+            to="/admin/restok" 
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200"
+            :class="route.path === '/admin/restok' ? 'bg-slate-700 text-white shadow-sm border border-slate-600' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'"
+          >
+            📦 Restok
+          </router-link>
         </div>
 
         <!-- Tombol Logout (Clean Neutral Style) -->

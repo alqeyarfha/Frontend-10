@@ -10,10 +10,14 @@ const password = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
+const isServerError = ref(false)
 
 const translateLoginError = (msg) => {
-  if (!msg) return 'Terjadi kesalahan.'
+  if (!msg) return 'Terjadi kesalahan pada server.'
   const m = msg.toLowerCase()
+  if (m.includes('server error') || m.includes('500') || m.includes('internal server')) {
+    return 'Server Backend mengalami error (500). Pastikan MySQL XAMPP aktif & database sudah terhubung.'
+  }
   if (m.includes('user tidak ditemukan') || m.includes('not found')) return 'Email tidak terdaftar. Periksa kembali email Anda.'
   if (m.includes('password salah') || m.includes('password wrong') || m.includes('invalid credentials') || m.includes('kredensial')) return 'Kata sandi salah. Coba lagi.'
   if (m.includes('unauthenticated') || m.includes('unauthorized')) return 'Sesi tidak valid. Silakan login kembali.'
@@ -21,9 +25,30 @@ const translateLoginError = (msg) => {
   return msg
 }
 
+const handleDemoLogin = () => {
+  const emailLower = (email.value || 'admin@test.com').toLowerCase()
+  const isAdminUser = emailLower.includes('admin')
+  const mockUser = {
+    id: 1,
+    email: email.value || 'admin@test.com',
+    name: isAdminUser ? 'Admin Toko Sembako' : (email.value ? email.value.split('@')[0] : 'Pelanggan'),
+    role: isAdminUser ? 'admin' : 'user'
+  }
+  localStorage.setItem('token', 'mock-demo-token-12345')
+  localStorage.setItem('user', JSON.stringify(mockUser))
+  window.dispatchEvent(new CustomEvent('user-updated'))
+
+  if (isAdminUser) {
+    router.push('/dashboard')
+  } else {
+    router.push({ name: 'home' })
+  }
+}
+
 const handleLogin = async () => {
   loading.value = true
   errorMessage.value = ''
+  isServerError.value = false
 
   try {
     const response = await api.post('/login', {
@@ -65,6 +90,10 @@ const handleLogin = async () => {
       router.push({ name: 'home' })
     }
   } catch (error) {
+    if (error.response?.status === 500 || (error.response?.data?.message && error.response.data.message.toLowerCase().includes('server error'))) {
+      isServerError.value = true
+    }
+
     if (error.response && error.response.data.message) {
       errorMessage.value = translateLoginError(error.response.data.message)
     } else if (error.response?.data?.errors) {
@@ -72,6 +101,7 @@ const handleLogin = async () => {
       errorMessage.value = err[Object.keys(err)[0]][0]
     } else {
       errorMessage.value = 'Gagal terhubung ke server backend!'
+      isServerError.value = true
     }
   } finally {
     loading.value = false
@@ -103,13 +133,23 @@ const handleLogin = async () => {
 
       <!-- Alert -->
       <transition name="fade">
-        <div v-if="errorMessage" class="alert-box">
-          <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span>{{ errorMessage }}</span>
+        <div v-if="errorMessage" class="alert-box flex-col items-start gap-2">
+          <div class="flex items-center gap-2">
+            <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>{{ errorMessage }}</span>
+          </div>
+          <button
+            v-if="isServerError"
+            type="button"
+            @click="handleDemoLogin"
+            class="mt-1 w-full text-xs font-semibold py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shadow-sm"
+          >
+            🚀 Masuk Mode Demo / Offline (Bypass Server)
+          </button>
         </div>
       </transition>
 

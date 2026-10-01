@@ -11,20 +11,28 @@ import ProfilView from '../views/ProfilView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AdminTransaksiView from '../views/AdminTransaksiView.vue'
 import AdminUsersView from '../views/AdminUsersView.vue'
+import KategoriView from '../views/KategoriView.vue'
+import AdminLaporanView from '../views/AdminLaporanView.vue'
+import AdminRestokView from '../views/AdminRestokView.vue'
+import AdminLayout from '../layouts/AdminLayout.vue'
+import MainLayout from '../layouts/MainLayout.vue'
 
 const routes = [
-  { path: '/', name: 'home', component: HomeView },
-  { path: '/produk', name: 'produk', component: ProdukView, meta: { requiresAdmin: true } },
-  { path: '/produk/:id', name: 'detail-produk', component: DetailProdukView },
+  { path: '/', name: 'home', component: HomeView, meta: { layout: MainLayout } },
+  { path: '/produk', name: 'produk', component: ProdukView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/produk/:id', name: 'detail-produk', component: DetailProdukView, meta: { layout: MainLayout } },
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
-  { path: '/keranjang', name: 'keranjang', component: KeranjangView },
-  { path: '/checkout', name: 'checkout', component: CheckoutView },
-  { path: '/riwayat', name: 'riwayat', component: RiwayatView },
-  { path: '/profil', name: 'profil', component: ProfilView },
-  { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAdmin: true } },
-  { path: '/admin/transaksi', name: 'admin-transaksi', component: AdminTransaksiView, meta: { requiresAdmin: true } }
-  , { path: '/admin/users', name: 'admin-users', component: AdminUsersView, meta: { requiresAdmin: true } }
+  { path: '/keranjang', name: 'keranjang', component: KeranjangView, meta: { layout: MainLayout } },
+  { path: '/checkout', name: 'checkout', component: CheckoutView, meta: { layout: MainLayout } },
+  { path: '/riwayat', name: 'riwayat', component: RiwayatView, meta: { layout: MainLayout } },
+  { path: '/profil', name: 'profil', component: ProfilView, meta: { layout: MainLayout } },
+  { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/admin/transaksi', name: 'admin-transaksi', component: AdminTransaksiView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/admin/users', name: 'admin-users', component: AdminUsersView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/admin/kategori', name: 'admin-kategori', component: KategoriView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/admin/laporan', name: 'admin-laporan', component: AdminLaporanView, meta: { requiresAdmin: true, layout: AdminLayout } },
+  { path: '/admin/restok', name: 'admin-restok', component: AdminRestokView, meta: { requiresAdmin: true, layout: AdminLayout } }
 ]
 
 const router = createRouter({
